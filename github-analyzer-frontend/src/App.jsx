@@ -50,8 +50,11 @@ function App() {
 
       const token = localStorage.getItem("token");
 
+      // ✅ Use ENV instead of localhost
+      const API = import.meta.env.VITE_API_URL;
+
       const res = await axios.post(
-        "http://localhost:5000/api/analyze",
+        `${API}/api/analyze`,
         { repoUrl },
         {
           headers: {
@@ -94,17 +97,17 @@ function App() {
             </span>
 
             <button
-onClick={() => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  localStorage.removeItem("recent"); // 🔥 ADD THIS
+              onClick={() => {
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+                localStorage.removeItem("recent"); // 🔥 ADD THIS
 
-  setUser(null);
+                setUser(null);
 
-  // reset UI
-  setResult(null);
-  setRepoUrl("");
-}}
+                // reset UI
+                setResult(null);
+                setRepoUrl("");
+              }}
               className="text-sm text-red-500 hover:underline"
             >
               Logout

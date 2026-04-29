@@ -5,9 +5,12 @@ function AuthModal({ onClose, onSuccess }) {
 
   const handleSuccess = async (credentialResponse) => {
     try {
+      // ✅ Use environment variable instead of localhost
+      const API = import.meta.env.VITE_API_URL;
+
       // 🔥 Send token to backend
       const res = await axios.post(
-        "http://localhost:5000/api/auth/google",
+        `${API}/api/auth/google`,
         {
           token: credentialResponse.credential,
         }
