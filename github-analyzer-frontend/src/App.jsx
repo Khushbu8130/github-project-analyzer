@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, History, Search, AlertTriangle, Info, CheckCircle, ShieldAlert } from "lucide-react";
 
-import Hero from "./components/Hero";
-import SearchBar from "./components/SearchBar";
+import Navbar from "./components/Navbar";
+import HeroSection from "./components/HeroSection";
 import FeatureCards from "./components/FeatureCards";
-import ResultCard from "./components/ResultCard";
+import Loader from "./components/Loader";
+import ResultsDashboard from "./components/ResultsDashboard";
+import AboutSection from "./components/AboutSection";
+import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 
 function App() {
@@ -16,30 +21,82 @@ function App() {
   const [user, setUser] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
 
-  // ✅ Load user from localStorage
+  // 🎨 THEME STATE
+  const [theme, setTheme] = useState("dark");
+
+  // 🔔 TOAST STATE (Custom high-fidelity notifications)
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = (message, type = "info") => {
+    const id = Date.now() + Math.random().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 4500);
+  };
+
+  const removeToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // ✅ Initialize theme and auth from localStorage
   useEffect(() => {
+    // Load user
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    // Load theme
+    const storedTheme = localStorage.getItem("theme") || "dark";
+    setTheme(storedTheme);
+    if (storedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    }
   }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+
+    if (nextTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      addToast("Switched to Cyber Dark mode 🌙", "info");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+      addToast("Switched to clean Light mode ☀️", "info");
+    }
+  };
 
   // ⭐ SAVE RECENT SEARCHES
   const saveRecent = (url) => {
     const prev = JSON.parse(localStorage.getItem("recent")) || [];
-    const updated = [url, ...prev.filter((r) => r !== url)].slice(0, 3);
+    const updated = [url, ...prev.filter((r) => r !== url)].slice(0, 4);
     localStorage.setItem("recent", JSON.stringify(updated));
   };
 
-  const recent = JSON.parse(localStorage.getItem("recent")) || [];
+  const getRecent = () => {
+    return JSON.parse(localStorage.getItem("recent")) || [];
+  };
 
   const handleAnalyze = async () => {
     console.log("Analyze clicked", { repoUrl, user });
 
-    if (!repoUrl) return alert("Enter GitHub URL");
+    if (!repoUrl) {
+      addToast("Please enter a valid GitHub repository URL!", "warning");
+      return;
+    }
 
     // 🔐 Require login
     if (!user) {
+      addToast("Authentication required! Please sign in with Google.", "warning");
       setShowAuth(true);
       return;
     }
@@ -53,6 +110,8 @@ function App() {
       // ✅ Use ENV instead of localhost
       const API = import.meta.env.VITE_API_URL;
 
+      addToast("Connecting to analytical server... 🚀", "info");
+
       const res = await axios.post(
         `${API}/api/analyze`,
         { repoUrl },
@@ -64,134 +123,202 @@ function App() {
       );
 
       setResult(res.data);
-
-      // ⭐ Save recent
       saveRecent(repoUrl);
+      addToast("Audit successfully compiled! Check findings below. 🏆", "success");
 
     } catch (err) {
       console.error(err);
-      alert("Error analyzing repo");
+      addToast("Error auditing repo. Please check the URL/API.", "error");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("recent");
+    setUser(null);
+    setResult(null);
+    setRepoUrl("");
+    addToast("Logged out successfully! See you soon.", "info");
+  };
+
+  const recentList = getRecent();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200">
-
-      {/* 🔥 HEADER */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b px-6 py-3 flex justify-between items-center shadow-sm">
-        <h1 className="font-semibold text-lg">
-          GitHub Analyzer 🚀
-        </h1>
-
-        {user && (
-          <div className="flex items-center gap-3">
-            <img
-              src={user.picture}
-              alt="user"
-              className="w-8 h-8 rounded-full"
-            />
-            <span className="text-sm font-medium">
-              {user.name}
-            </span>
-
-            <button
-              onClick={() => {
-                localStorage.removeItem("user");
-                localStorage.removeItem("token");
-                localStorage.removeItem("recent"); // 🔥 ADD THIS
-
-                setUser(null);
-
-                // reset UI
-                setResult(null);
-                setRepoUrl("");
-              }}
-              className="text-sm text-red-500 hover:underline"
-            >
-              Logout
-            </button>
-          </div>
-        )}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
+      
+      {/* Dynamic Cursor Glow Trailing Background overlay */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-50 dark:opacity-75">
+        <div className="absolute -top-[40%] -left-[20%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent blur-[120px]" />
+        <div className="absolute -bottom-[40%] -right-[20%] w-[80%] h-[80%] rounded-full bg-gradient-to-tr from-pink-500/10 via-purple-500/5 to-transparent blur-[120px]" />
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="p-6">
+      {/* 🔥 STICKY HEADER NAVBAR */}
+      <Navbar 
+        user={user} 
+        onLogout={handleLogout} 
+        theme={theme} 
+        onToggleTheme={handleToggleTheme} 
+        showAuthModal={() => setShowAuth(true)} 
+      />
 
-        {/* HERO */}
-        <Hero setRepoUrl={setRepoUrl} />
-
-        {/* SEARCH */}
-        <SearchBar
+      {/* MAIN APPLICATION CONTAINER */}
+      <main className="flex-grow z-10">
+        
+        {/* HERO HEADER FORM SECTION */}
+        <HeroSection 
           repoUrl={repoUrl}
           setRepoUrl={setRepoUrl}
           handleAnalyze={handleAnalyze}
           loading={loading}
         />
 
-        {/* 🔥 RECENT SEARCHES */}
-        {recent.length > 0 && !result && (
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500">Recent:</p>
+        {/* ⭐ RECENT SEARCH CHIPS ROW */}
+        {recentList.length > 0 && !result && !loading && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-2xl mx-auto px-4"
+          >
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono flex items-center justify-center gap-1.5 mb-3">
+              <History className="w-3.5 h-3.5 text-blue-500" />
+              <span>Recent Enquiries</span>
+            </p>
 
             <div className="flex justify-center gap-2 mt-2 flex-wrap">
-              {recent.map((r, i) => (
+              {recentList.map((r, i) => (
                 <button
                   key={i}
-                  onClick={() => setRepoUrl(r)}
-                  className="text-xs px-3 py-1 bg-gray-200 rounded-full hover:bg-gray-300"
+                  onClick={() => {
+                    setRepoUrl(r);
+                    addToast("Populated search box with query", "info");
+                  }}
+                  className="text-xs font-semibold font-mono px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-500/30 dark:hover:border-blue-500/30 shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >
-                  {r}
+                  <Search className="w-3 h-3 text-slate-400" />
+                  <span>{r.replace("https://github.com/", "")}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* EMPTY STATE */}
-        {!result && !loading && (
-          <div className="text-center mt-10 text-gray-500">
-            <p className="text-lg font-medium">
-              Paste a GitHub repo to get AI insights 🔍
-            </p>
-          </div>
+        {/* ANALYZING SKELETON LOADER */}
+        <AnimatePresence mode="wait">
+          {loading && (
+            <motion.div
+              key="loader"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Loader />
+            </motion.div>
+          )}
+
+          {/* DYNAMIC AUDIT SCOREBOARDS & SUGGESTIONS */}
+          {result && result.data && !loading && (
+            <motion.div
+              key="result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <ResultsDashboard result={result} />
+            </motion.div>
+          )}
+
+          {/* BRAND VALUE GRID CARDS */}
+          {!result && !loading && (
+            <motion.div
+              key="marketing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <FeatureCards />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* WORKFLOW HOW-TO */}
+        <AboutSection />
+
+      </main>
+
+      {/* PREMIUM HIGH-FIDELITY FOOTER */}
+      <Footer />
+
+      {/* 🔐 GOOGLE SIGN-IN POPUP MODAL */}
+      <AnimatePresence>
+        {showAuth && (
+          <AuthModal
+            onClose={() => {
+              setShowAuth(false);
+              addToast("Google authentication canceled", "warning");
+            }}
+            onSuccess={(userData) => {
+              setUser(userData);
+              setShowAuth(false);
+              addToast(`Welcome back, ${userData.name}! 👋`, "success");
+            }}
+          />
         )}
+      </AnimatePresence>
 
-        {/* FEATURES */}
-        {!result && <FeatureCards />}
+      {/* 🔔 FLOATING GLASSMORPHIC TOAST SYSTEM */}
+      <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="pointer-events-auto flex items-start gap-3 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl backdrop-blur-md"
+            >
+              {/* Type-based customized icons */}
+              {toast.type === "success" && (
+                <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
+                  <CheckCircle className="w-4.5 h-4.5" />
+                </div>
+              )}
+              {toast.type === "warning" && (
+                <div className="p-1 rounded-lg bg-amber-500/10 text-amber-500 shrink-0">
+                  <AlertTriangle className="w-4.5 h-4.5" />
+                </div>
+              )}
+              {toast.type === "error" && (
+                <div className="p-1 rounded-lg bg-red-500/10 text-red-500 shrink-0">
+                  <ShieldAlert className="w-4.5 h-4.5" />
+                </div>
+              )}
+              {toast.type === "info" && (
+                <div className="p-1 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
+                  <Info className="w-4.5 h-4.5" />
+                </div>
+              )}
 
-        {/* LOADING */}
-        {loading && (
-          <p className="text-center mt-6 text-gray-500">
-            Analyzing project...
-          </p>
-        )}
+              {/* Message */}
+              <div className="flex-1 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {toast.message}
+              </div>
 
-        {/* RESULT */}
-        {result && result.data && (
-          <div className="mt-8">
-            <ResultCard result={result} />
-          </div>
-        )}
-
-        {/* TRUST BADGE */}
-        <p className="text-xs text-gray-400 text-center mt-8">
-          🔒 Secure analysis • No data misuse
-        </p>
-
+              {/* Toast close cross */}
+              <button 
+                onClick={() => removeToast(toast.id)} 
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors text-xs font-bold font-mono pl-1 cursor-pointer"
+              >
+                ×
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
-      {/* 🔐 AUTH MODAL */}
-      {showAuth && (
-        <AuthModal
-          onClose={() => setShowAuth(false)}
-          onSuccess={(userData) => {
-            setUser(userData);
-            setShowAuth(false);
-          }}
-        />
-      )}
     </div>
   );
 }
