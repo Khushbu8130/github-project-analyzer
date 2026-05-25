@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, History, Search, AlertTriangle, Info, CheckCircle, ShieldAlert } from "lucide-react";
+import { Sparkles, History, Search, AlertTriangle, Info, CheckCircle, ShieldAlert, Sparkle, X } from "lucide-react";
 
 import Navbar from "./components/Navbar";
 import HeroSection from "./components/HeroSection";
@@ -26,6 +26,13 @@ function App() {
 
   // 🔔 TOAST STATE (Custom high-fidelity notifications)
   const [toasts, setToasts] = useState([]);
+
+  // 🧠 FLOATING AI ASSISTANT PANEL STATE
+  const [isAssistantVisible, setIsAssistantVisible] = useState(true);
+  const [assistantMessage, setAssistantMessage] = useState("");
+
+  // Ref for auto-scrolling to results
+  const resultsRef = useRef(null);
 
   const addToast = (message, type = "info") => {
     const id = Date.now() + Math.random().toString();
@@ -58,6 +65,34 @@ function App() {
       document.documentElement.classList.remove("dark");
     }
   }, []);
+
+  // Update Floating Assistant Message based on app state
+  useEffect(() => {
+    if (loading) {
+      setAssistantMessage("⚡ AI is actively analyzing repository patterns. Scrutinizing commit distribution ratios...");
+    } else if (result && result.data) {
+      const score = result.data.score || 0;
+      const isSuspicious = result.meta?.authenticity?.toLowerCase().includes("suspicious");
+      if (isSuspicious) {
+        setAssistantMessage("⚠️ Warning: Possible template reuse or bulk upload detected. Commit history spans very few active days.");
+      } else if (score >= 75) {
+        setAssistantMessage("🌟 Audit complete! This repository is highly maintained and exhibits excellent developmental consistency. Perfect for portfolio display!");
+      } else {
+        setAssistantMessage("💡 Tip: Repository quality is intermediate. Increasing commit frequency and structuring modular folders will improve the credibility index.");
+      }
+    } else {
+      setAssistantMessage("👋 Hello! Paste any public GitHub repository link above. Our AI scraper will audit commit activity and authenticate codebases instantly.");
+    }
+  }, [loading, result]);
+
+  // Smooth scroll to results when audit completes
+  useEffect(() => {
+    if (result && resultsRef.current) {
+      setTimeout(() => {
+        resultsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [result]);
 
   const handleToggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -106,8 +141,6 @@ function App() {
       setResult(null);
 
       const token = localStorage.getItem("token");
-
-      // ✅ Use ENV instead of localhost
       const API = import.meta.env.VITE_API_URL;
 
       addToast("Connecting to analytical server... 🚀", "info");
@@ -147,7 +180,7 @@ function App() {
   const recentList = getRecent();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-300 relative">
       
       {/* Dynamic Cursor Glow Trailing Background overlay */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-50 dark:opacity-75">
@@ -195,7 +228,7 @@ function App() {
                     setRepoUrl(r);
                     addToast("Populated search box with query", "info");
                   }}
-                  className="text-xs font-semibold font-mono px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-500/30 dark:hover:border-blue-500/30 shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                  className="text-xs font-semibold font-mono px-3.5 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-500/30 dark:hover:border-blue-500/30 shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 animate-fade"
                 >
                   <Search className="w-3 h-3 text-slate-400" />
                   <span>{r.replace("https://github.com/", "")}</span>
@@ -220,14 +253,16 @@ function App() {
 
           {/* DYNAMIC AUDIT SCOREBOARDS & SUGGESTIONS */}
           {result && result.data && !loading && (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <ResultsDashboard result={result} />
-            </motion.div>
+            <div ref={resultsRef} className="scroll-mt-20">
+              <motion.div
+                key="result"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <ResultsDashboard result={result} />
+              </motion.div>
+            </div>
           )}
 
           {/* BRAND VALUE GRID CARDS */}
@@ -268,8 +303,54 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* 🧠 FLOATING AI ASSISTANT PANEL */}
+      <AnimatePresence>
+        {isAssistantVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 100 }}
+            className="fixed bottom-6 right-6 z-[9998] max-w-sm w-[90%] sm:w-80 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl backdrop-blur-md p-4 flex flex-col gap-3"
+          >
+            {/* Header info */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-blue-500 font-bold text-xs uppercase tracking-wider font-mono">
+                <Sparkles className="w-4.5 h-4.5 text-blue-500 animate-spin" />
+                <span>AI Agent Advisor</span>
+              </div>
+              <button
+                onClick={() => setIsAssistantVisible(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                aria-label="Close Assistant Panel"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Message Body */}
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-350 leading-relaxed font-sans">
+              {assistantMessage}
+            </p>
+
+            {/* Action link */}
+            {!result && !loading && (
+              <button
+                onClick={() => {
+                  setRepoUrl("https://github.com/facebook/react");
+                  addToast("Shortcuts configured react repo", "info");
+                }}
+                className="w-full text-center py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-[10px] font-bold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+              >
+                Let's run facebook/react audit
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 🔔 FLOATING GLASSMORPHIC TOAST SYSTEM */}
-      <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-6 left-6 sm:left-auto sm:right-6 z-[9999] flex flex-col gap-2.5 max-w-sm w-[90%] sm:w-full pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div

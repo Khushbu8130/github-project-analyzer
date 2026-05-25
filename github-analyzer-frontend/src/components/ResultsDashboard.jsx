@@ -12,7 +12,6 @@ import {
 import { normalize } from "../utils/normalize";
 
 function ResultsDashboard({ result }) {
-  const scoreRef = useRef(null);
   const data = result?.data || {};
   const meta = result?.meta || {};
   const score = data.score || 0;
@@ -36,7 +35,6 @@ function ResultsDashboard({ result }) {
         }
 
         const particleCount = 50 * (timeLeft / duration);
-        // confettis from two corners
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
       }, 250);
@@ -64,25 +62,66 @@ function ResultsDashboard({ result }) {
       return {
         icon: CheckCircle,
         style: "bg-emerald-500/10 dark:bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 dark:border-emerald-500/10",
-        label: "Highly Authentic Project"
+        label: "Authentic Project ✅"
       };
     }
     if (text.includes("suspicious") || text.includes("bulk")) {
       return {
         icon: ShieldAlert,
         style: "bg-red-500/10 dark:bg-red-500/5 text-red-600 dark:text-red-400 border border-red-500/30 dark:border-red-500/10 animate-pulse",
-        label: "Suspicious Bulk Upload"
+        label: "Suspicious Activity ⚠️"
       };
     }
     return {
       icon: AlertTriangle,
       style: "bg-amber-500/10 dark:bg-amber-500/5 text-amber-600 dark:text-amber-400 border border-amber-500/30 dark:border-amber-500/10",
-      label: "Moderate Activity / Small Scale"
+      label: "Early Stage / Light Activity"
     };
   };
 
   const badge = getAuthenticityBadge(authenticity);
   const BadgeIcon = badge.icon;
+
+  // Smart Badges calculation
+  const smartBadges = [];
+  if (score >= 70 && authenticity.toLowerCase().includes("authentic")) {
+    smartBadges.push({ label: "Authentic Project ✅", style: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" });
+  } else if (authenticity.toLowerCase().includes("suspicious")) {
+    smartBadges.push({ label: "Suspicious Audit ⚠️", style: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20 animate-pulse" });
+  }
+  
+  if (meta.totalCommits > 40 || meta.activeDays > 10) {
+    smartBadges.push({ label: "High Activity 🔥", style: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" });
+  }
+  
+  if (meta.fileCount < 60 && meta.totalCommits > 5) {
+    smartBadges.push({ label: "Beginner Friendly 📘", style: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" });
+  } else if (meta.fileCount > 150) {
+    smartBadges.push({ label: "Deep Enterprise Codebase 🏢", style: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" });
+  }
+
+  // Data Storytelling Highlights Generation
+  const storytellingInsights = [];
+  if (meta.totalCommits > 35) {
+    storytellingInsights.push("🚀 Strong commit consistency and active version revisions");
+  } else {
+    storytellingInsights.push("⚠️ Early development footprint; low commit frequency");
+  }
+
+  if (meta.activeDays > 10) {
+    storytellingInsights.push("📅 Established developmental timeline calendar ratio");
+  } else if (meta.activeDays < 4) {
+    storytellingInsights.push("⚠️ Concentrated timeline spike; potential template initial bulk-upload");
+  }
+
+  if (meta.folderCount > 5) {
+    storytellingInsights.push("📂 Structured architecture with clean multi-directory layouts");
+  }
+  if (meta.hasFrontend && meta.hasBackend) {
+    storytellingInsights.push("💻 Full-stack system capability verified");
+  }
+
+  const combinedInsights = [...storytellingInsights, ...(data.insights || [])];
 
   // Chart Data preparation
   const chartData = [
@@ -98,7 +137,7 @@ function ResultsDashboard({ result }) {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
       return (
-        <div className="p-3 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg backdrop-blur-md text-xs font-semibold">
+        <div className="p-3 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg backdrop-blur-md text-xs font-semibold">
           <p className="text-slate-500 dark:text-slate-400">{dataPoint.name}</p>
           <p className="text-slate-900 dark:text-white text-sm font-bold mt-0.5">{dataPoint.raw}</p>
         </div>
@@ -110,7 +149,7 @@ function ResultsDashboard({ result }) {
   const CustomLineTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="p-3 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg backdrop-blur-md text-xs font-semibold">
+        <div className="p-3 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg backdrop-blur-md text-xs font-semibold">
           <p className="text-slate-500 dark:text-slate-400">Date: {payload[0].payload.date}</p>
           <p className="text-blue-500 text-sm font-bold mt-0.5">Commits: {payload[0].value}</p>
         </div>
@@ -127,7 +166,7 @@ function ResultsDashboard({ result }) {
       className="max-w-5xl mx-auto mt-12 p-6 md:p-8 rounded-2xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 shadow-xl backdrop-blur-md relative overflow-hidden"
     >
       {/* Glossy top lighting line */}
-      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse" />
 
       {/* Dashboard Top Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
@@ -170,12 +209,26 @@ function ResultsDashboard({ result }) {
         </div>
       </div>
 
+      {/* Smart Badges row */}
+      {smartBadges.length > 0 && (
+        <div className="flex flex-wrap gap-2.5 mt-4">
+          {smartBadges.map((s, i) => (
+            <span
+              key={i}
+              className={`px-3 py-1 text-xs font-bold border rounded-xl flex items-center gap-1.5 shadow-sm transition-all duration-300 hover:scale-105 ${s.style}`}
+            >
+              {s.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Main Panels Grid */}
-      <div className="grid md:grid-cols-12 gap-8 mt-8">
+      <div className="grid md:grid-cols-12 gap-8 mt-6">
         
         {/* Left column: Circular score indicator & Authenticity alert */}
-        <div className="md:col-span-4 flex flex-col items-center justify-center p-6 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900/60 shadow-inner">
-          <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono mb-6">Credibility Score</h3>
+        <div className="md:col-span-4 flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-850/60 shadow-inner hover:border-blue-500/30 dark:hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
+          <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono mb-6">Credibility Index</h3>
           
           {/* SVG Score Ring */}
           <div className="relative w-36 h-36 flex items-center justify-center">
@@ -206,15 +259,15 @@ function ResultsDashboard({ result }) {
               <span className={`text-3xl font-extrabold font-mono leading-none tracking-tighter ${getScoreColor(score).split(" ")[0]}`}>
                 {score}%
               </span>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">
-                AI Rating
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1.5 font-mono">
+                Credibility
               </span>
             </div>
           </div>
 
           <div className="w-full text-center mt-6 space-y-2">
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              Level: {data.level} Index
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono">
+              Score: {score}/100 Rating
             </p>
             <p className="text-xs text-slate-400 leading-relaxed font-sans max-w-[200px] mx-auto">
               Rating computed dynamically based on commits distribution vs active workspace timelines.
@@ -227,7 +280,7 @@ function ResultsDashboard({ result }) {
           
           {/* AI Structured summary */}
           {meta.summary && (
-            <div className="p-4 rounded-xl bg-blue-500/5 border-l-4 border-blue-500 text-sm font-medium">
+            <div className="p-4 rounded-xl bg-blue-500/5 border-l-4 border-blue-500 text-sm font-medium hover:shadow-md transition-all duration-300">
               <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold mb-1">
                 <Sparkles className="w-4.5 h-4.5" />
                 <span>AI Automated Audit Summary</span>
@@ -251,7 +304,7 @@ function ResultsDashboard({ result }) {
                   <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontStyle="semibold" />
                   <YAxis stroke="#64748b" fontSize={10} />
                   <Tooltip content={<CustomBarTooltip />} />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={45}>
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={45} isAnimationActive={true} animationDuration={1200}>
                     {chartData.map((entry, i) => (
                       <Cell
                         key={i}
@@ -281,7 +334,7 @@ function ResultsDashboard({ result }) {
       {/* Raw Metrics cards grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
         
-        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900 flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900 flex items-center gap-3 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
           <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
             <TrendingUp className="w-5 h-5" />
           </div>
@@ -291,7 +344,7 @@ function ResultsDashboard({ result }) {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900 flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900 flex items-center gap-3 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/5 transition-all duration-300">
           <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
             <Calendar className="w-5 h-5" />
           </div>
@@ -301,7 +354,7 @@ function ResultsDashboard({ result }) {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900 flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900 flex items-center gap-3 hover:border-emerald-500/40 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300">
           <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
             <FileText className="w-5 h-5" />
           </div>
@@ -311,7 +364,7 @@ function ResultsDashboard({ result }) {
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900 flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900 flex items-center gap-3 hover:border-indigo-500/40 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
           <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
             <Layers className="w-5 h-5" />
           </div>
@@ -351,6 +404,8 @@ function ResultsDashboard({ result }) {
                   strokeWidth={2} 
                   fillOpacity={1} 
                   fill="url(#colorCommits)" 
+                  isAnimationActive={true}
+                  animationDuration={1500}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -362,33 +417,33 @@ function ResultsDashboard({ result }) {
       <div className="grid md:grid-cols-2 gap-6 mt-8 pt-8 border-t border-slate-200/50 dark:border-slate-800/50">
         
         {/* Insights list */}
-        <div className="p-5 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900/60">
-          <h3 className="font-bold text-sm font-mono text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+        <div className="p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900/60 hover:border-emerald-500/30 transition-all duration-300">
+          <h3 className="font-bold text-sm font-mono text-slate-900 dark:text-white flex items-center gap-2 mb-4">
             <CheckCircle className="w-4 h-4 text-emerald-500" />
             <span>AI Discovered Strengths</span>
           </h3>
-          <ul className="space-y-2">
-            {data.insights?.map((i, idx) => (
-              <li key={idx} className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
-                <span className="text-emerald-500 select-none mt-0.5">•</span>
+          <ul className="space-y-3">
+            {combinedInsights.map((i, idx) => (
+              <li key={idx} className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-start gap-2.5">
+                <span className="text-emerald-500 select-none mt-0.5">✓</span>
                 <span>{i}</span>
               </li>
             ))}
-            {(!data.insights || data.insights.length === 0) && (
+            {combinedInsights.length === 0 && (
               <li className="text-xs text-slate-500 italic">No structured strengths found</li>
             )}
           </ul>
         </div>
 
         {/* Suggestions list */}
-        <div className="p-5 rounded-xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900/60">
-          <h3 className="font-bold text-sm font-mono text-slate-900 dark:text-white flex items-center gap-2 mb-3">
+        <div className="p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200/40 dark:border-slate-900/60 hover:border-purple-500/30 transition-all duration-300">
+          <h3 className="font-bold text-sm font-mono text-slate-900 dark:text-white flex items-center gap-2 mb-4">
             <HelpCircle className="w-4 h-4 text-purple-500" />
             <span>AI Structural Recommendations</span>
           </h3>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {data.suggestions?.map((i, idx) => (
-              <li key={idx} className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
+              <li key={idx} className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-start gap-2.5">
                 <span className="text-purple-500 select-none mt-0.5">•</span>
                 <span>{i}</span>
               </li>
